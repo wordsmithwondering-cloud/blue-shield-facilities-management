@@ -22,7 +22,7 @@ export const LOCATIONS: Record<string, string> = {
   "10F-FT": "10th Floor, Front Tower",
   "10F-RT": "10th Floor, Rear Tower",
   "PH": "Penthouse",
-  "B1": "Basement / Parking"
+  "B1": "Basement / Parking",
 };
 
 export function locationName(code: string | null) {
