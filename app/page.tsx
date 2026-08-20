@@ -1,23 +1,36 @@
 import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight } from "lucide-react";
+import { redirect } from "next/navigation";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) redirect('/dashboard');
+
   return (
-    <main>
-      <div className="card">
-        <h1>Blue Shield Towers</h1>
-        <p>Facility issue reporting and maintenance management.</p>
-        <div className="actions">
-          <Link className="primary" href="/report">
-            Report an issue
-          </Link>
-          <Link className="secondary" href="/login">
-            Sign in
-          </Link>
-          <Link className="secondary" href="/signup">
-            Create account
+    <main className="landing-page">
+      <section className="landing-hero">
+        <div className="landing-copy">
+          <p className="landing-kicker">Blue Shield Towers</p>
+          <h1>Facility Management<br />Made Simple</h1>
+          <p className="landing-summary">Manage maintenance, visitors, services and building operations from one secure portal.</p>
+          <Link className="portal-button" href="/login">
+            Access Portal <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </div>
-      </div>
+        <div className="landing-visual">
+          <Image
+            className="landing-tower-image"
+            src="/blue-shield-towers.png"
+            alt="Blue Shield Towers building"
+            fill
+            priority
+            sizes="(max-width: 800px) 100vw, 55vw"
+          />
+        </div>
+      </section>
     </main>
   );
 }

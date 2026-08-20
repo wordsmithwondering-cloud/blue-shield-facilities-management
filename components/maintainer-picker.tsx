@@ -1,0 +1,20 @@
+'use client';
+
+import { useState } from 'react';
+import { ChevronDown, Droplets, Settings, ShieldCheck, Sparkles, UserRound, UserX, Wind, Wrench, Zap, type LucideIcon } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { type Maintainer, maintainerColourClasses } from '@/lib/maintainers';
+
+const icons: Record<string, LucideIcon> = { wrench: Wrench, droplets: Droplets, zap: Zap, wind: Wind, sparkles: Sparkles, settings: Settings, shield: ShieldCheck };
+
+export function MaintainerIcon({ maintainer, className = 'size-4' }: { maintainer: Pick<Maintainer, 'icon'>; className?: string }) {
+  const Icon = icons[maintainer.icon] || Wrench;
+  return <Icon className={className} aria-hidden="true" />;
+}
+
+export function MaintainerPicker({ ticketId, value, legacyValue, maintainers, disabled, onAssign }: { ticketId: string; value: string | null; legacyValue: string | null; maintainers: Maintainer[]; disabled: boolean; onAssign: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = maintainers.find((person) => person.id === value);
+
+  return <div><Label htmlFor={`assignee-${ticketId}`}>Maintainer / trade</Label><button id={`assignee-${ticketId}`} type="button" aria-haspopup="listbox" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)} className="flex min-h-12 w-full items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-left shadow-sm transition hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-700 disabled:cursor-not-allowed disabled:opacity-60"><span className={`flex size-9 shrink-0 items-center justify-center rounded-full ring-1 ${selected ? maintainerColourClasses[selected.colour] : 'bg-slate-100 text-slate-500 ring-slate-200'}`}>{selected ? <MaintainerIcon maintainer={selected} /> : <UserRound className="size-4" aria-hidden="true" />}</span><span className="min-w-0 flex-1">{selected ? <><b className="block truncate text-sm text-slate-900">{selected.name}</b><small className="block truncate text-xs text-slate-500">{selected.trade}{!selected.active ? ' · inactive' : ''}</small></> : legacyValue ? <><b className="block truncate text-sm text-slate-900">{legacyValue}</b><small className="block text-xs text-amber-700">Legacy assignment</small></> : <><b className="block text-sm text-slate-700">Unassigned</b><small className="block text-xs text-slate-500">Choose a worker</small></>}</span><ChevronDown className={`size-4 shrink-0 text-slate-400 transition ${open ? 'rotate-180' : ''}`} aria-hidden="true" /></button>{open && <div className="mt-2 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg" role="listbox" aria-label="Available maintainers"><button type="button" role="option" aria-selected={!value && !legacyValue} className="flex w-full items-center gap-3 border-b border-slate-100 px-3 py-2.5 text-left hover:bg-slate-50" onClick={() => { setOpen(false); onAssign(''); }}><span className="flex size-9 items-center justify-center rounded-full bg-slate-100 text-slate-500"><UserX className="size-4" /></span><span><b className="block text-sm text-slate-800">Unassigned</b><small className="text-xs text-slate-500">Return to the assignment queue</small></span></button>{maintainers.filter((person) => person.active).map((person) => <button key={person.id} type="button" role="option" aria-selected={value === person.id} className={`flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-50 ${value === person.id ? 'bg-blue-50' : ''}`} onClick={() => { setOpen(false); onAssign(person.id); }}><span className={`flex size-9 shrink-0 items-center justify-center rounded-full ring-1 ${maintainerColourClasses[person.colour] || maintainerColourClasses.blue}`}><MaintainerIcon maintainer={person} /></span><span className="min-w-0"><b className="block truncate text-sm text-slate-900">{person.name}</b><small className="block truncate text-xs text-slate-500">{person.trade}</small></span></button>)}</div>}</div>;
+}

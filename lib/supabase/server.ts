@@ -28,13 +28,16 @@ export async function createServerSupabaseClient() {
 export async function getStaffUser() {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
+  return isStaffEmail(user?.email) ? user : null;
+}
+
+export function isStaffEmail(email?: string) {
   const allowedEmails = (process.env.STAFF_EMAILS || '')
     .split(',')
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
 
-  if (!user?.email || !allowedEmails.includes(user.email.toLowerCase())) return null;
-  return user;
+  return Boolean(email && allowedEmails.includes(email.toLowerCase()));
 }
 
 export function createAdminSupabaseClient() {

@@ -21,7 +21,7 @@ export async function GET() {
     if (!await getStaffUser()) return NextResponse.json({ error: 'This management dashboard is available only to approved facilities staff.' }, { status: 403 });
     const { data, error } = await createAdminSupabaseClient()
       .from('facility_tickets')
-      .select('id, ticket_no, location, category, priority, description, reporter_name, company, phone, status, assigned_to, photo_url, created_at')
+      .select('id, ticket_no, location, category, priority, description, reporter_name, company, phone, status, assigned_to, assigned_maintainer_id, photo_url, created_at')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -39,6 +39,7 @@ export async function PATCH(request: Request) {
     const id = typeof body.id === 'string' ? body.id : '';
     const status = typeof body.status === 'string' ? body.status : undefined;
     const assignedTo = typeof body.assignedTo === 'string' ? body.assignedTo.trim() : undefined;
+    const assignedMaintainerId = typeof body.assignedMaintainerId === 'string' ? body.assignedMaintainerId.trim() : undefined;
 
     if (!id || (status !== undefined && !STATUSES.includes(status as TicketStatus))) {
       return NextResponse.json({ error: 'A ticket ID and valid status are required.' }, { status: 400 });
@@ -47,6 +48,20 @@ export async function PATCH(request: Request) {
     const updates: Record<string, string | null> = {};
     if (status !== undefined) updates.status = status;
     if (assignedTo !== undefined) updates.assigned_to = assignedTo || null;
+    if (assignedMaintainerId !== undefined) {
+      updates.assigned_maintainer_id = assignedMaintainerId || null;
+      if (!assignedMaintainerId) {
+        updates.assigned_to = null;
+      } else {
+        const { data: maintainer, error: maintainerError } = await createAdminSupabaseClient()
+          .from('facility_maintainers')
+          .select('name, trade, active')
+          .eq('id', assignedMaintainerId)
+          .single();
+        if (maintainerError || !maintainer?.active) return NextResponse.json({ error: 'Select an active maintainer.' }, { status: 400 });
+        updates.assigned_to = `${maintainer.name} — ${maintainer.trade}`;
+      }
+    }
 
     const editableTextFields = {
       location: 'location', category: 'category', description: 'description',
@@ -81,7 +96,7 @@ export async function PATCH(request: Request) {
       .from('facility_tickets')
       .update(updates)
       .eq('id', id)
-      .select('id, ticket_no, location, category, priority, description, reporter_name, company, phone, status, assigned_to, photo_url, created_at')
+      .select('id, ticket_no, location, category, priority, description, reporter_name, company, phone, status, assigned_to, assigned_maintainer_id, photo_url, created_at')
       .single();
 
     if (error) throw error;
@@ -142,7 +157,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ ticket, submittedTicket: { id: ticket, ticket_no: ticket, location, category, priority, description: description.trim(), reporter_name: name, company: company || null, phone, status: 'NEW', assigned_to: null, photo_url: null, created_at: new Date().toISOString() } });
+    return NextResponse.json({ ticket, submittedTicket: { id: ticket, ticket_no: ticket, location, category, priority, description: description.trim(), reporter_name: name, company: company || null, phone, status: 'NEW', assigned_to: null, assigned_maintainer_id: null, photo_url: null, created_at: new Date().toISOString() } });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Ticket could not be created.' }, { status: 500 });
