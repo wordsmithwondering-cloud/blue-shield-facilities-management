@@ -11,7 +11,10 @@ export default function HomePage() {
             Report an issue
           </Link>
           <Link className="secondary" href="/login">
-            Staff sign in
+            Sign in
+          </Link>
+          <Link className="secondary" href="/signup">
+            Create account
           </Link>
         </div>
       </div>

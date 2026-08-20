@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import { getStaffUser } from '../../../lib/supabase/server';
-import { createAdminSupabaseClient } from '../../../lib/supabase/server';
+import { createAdminSupabaseClient, createServerSupabaseClient, getStaffUser } from '../../../lib/supabase/server';
 
 const STATUSES = ['NEW', 'ACKNOWLEDGED', 'ASSIGNED', 'IN PROGRESS', 'RESOLVED', 'CLOSED'] as const;
+const PRIORITIES = ['Normal', 'Urgent', 'Emergency'] as const;
 type TicketStatus = (typeof STATUSES)[number];
 
 async function addPhotoLinks<T extends { photo_url?: string | null }>(tickets: T[]) {
@@ -18,10 +18,10 @@ async function addPhotoLinks<T extends { photo_url?: string | null }>(tickets: T
 
 export async function GET() {
   try {
-    if (!await getStaffUser()) return NextResponse.json({ error: 'Staff access required.' }, { status: 403 });
+    if (!await getStaffUser()) return NextResponse.json({ error: 'This management dashboard is available only to approved facilities staff.' }, { status: 403 });
     const { data, error } = await createAdminSupabaseClient()
       .from('facility_tickets')
-      .select('id, ticket_no, location, category, priority, status, assigned_to, photo_url, created_at')
+      .select('id, ticket_no, location, category, priority, description, reporter_name, company, phone, status, assigned_to, photo_url, created_at')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -34,18 +34,38 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    if (!await getStaffUser()) return NextResponse.json({ error: 'Staff access required.' }, { status: 403 });
+    if (!await getStaffUser()) return NextResponse.json({ error: 'This management dashboard is available only to approved facilities staff.' }, { status: 403 });
     const body = await request.json();
     const id = typeof body.id === 'string' ? body.id : '';
-    const status = typeof body.status === 'string' ? body.status : '';
+    const status = typeof body.status === 'string' ? body.status : undefined;
     const assignedTo = typeof body.assignedTo === 'string' ? body.assignedTo.trim() : undefined;
 
-    if (!id || !STATUSES.includes(status as TicketStatus)) {
+    if (!id || (status !== undefined && !STATUSES.includes(status as TicketStatus))) {
       return NextResponse.json({ error: 'A ticket ID and valid status are required.' }, { status: 400 });
     }
 
-    const updates: Record<string, string | null> = { status };
+    const updates: Record<string, string | null> = {};
+    if (status !== undefined) updates.status = status;
     if (assignedTo !== undefined) updates.assigned_to = assignedTo || null;
+
+    const editableTextFields = {
+      location: 'location', category: 'category', description: 'description',
+      reporterName: 'reporter_name', company: 'company', phone: 'phone',
+    } as const;
+    for (const [input, column] of Object.entries(editableTextFields)) {
+      if (typeof body[input] === 'string') updates[column] = body[input].trim() || null;
+    }
+    if (typeof body.priority === 'string') {
+      if (!PRIORITIES.includes(body.priority)) return NextResponse.json({ error: 'Select a valid priority.' }, { status: 400 });
+      updates.priority = body.priority;
+    }
+    if (updates.phone !== undefined && updates.phone !== null && !/^\d{10}$/.test(updates.phone)) {
+      return NextResponse.json({ error: 'Phone number must contain exactly 10 digits.' }, { status: 400 });
+    }
+    for (const required of ['location', 'category', 'description', 'reporter_name']) {
+      if (required in updates && !updates[required]) return NextResponse.json({ error: 'Location, category, description, and reporter name cannot be empty.' }, { status: 400 });
+    }
+    if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'No ticket changes were provided.' }, { status: 400 });
 
     const timestampFields: Partial<Record<TicketStatus, string>> = {
       ACKNOWLEDGED: 'acknowledged_at',
@@ -54,14 +74,14 @@ export async function PATCH(request: Request) {
       RESOLVED: 'resolved_at',
       CLOSED: 'closed_at',
     };
-    const timestampField = timestampFields[status as TicketStatus];
+    const timestampField = status ? timestampFields[status as TicketStatus] : undefined;
     if (timestampField) updates[timestampField] = new Date().toISOString();
 
     const { data, error } = await createAdminSupabaseClient()
       .from('facility_tickets')
       .update(updates)
       .eq('id', id)
-      .select('id, ticket_no, location, category, priority, status, assigned_to, photo_url, created_at')
+      .select('id, ticket_no, location, category, priority, description, reporter_name, company, phone, status, assigned_to, photo_url, created_at')
       .single();
 
     if (error) throw error;
@@ -74,17 +94,24 @@ export async function PATCH(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const auth = await createServerSupabaseClient();
+    const { data: { user } } = await auth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+
     const form = await request.formData();
     const category = String(form.get('category') || '');
     const priority = String(form.get('priority') || 'Normal');
     const description = String(form.get('description') || '');
-    const name = String(form.get('name') || '');
+    const firstName = String(form.get('firstName') || '').trim();
+    const lastName = String(form.get('lastName') || '').trim();
+    const name = `${firstName} ${lastName}`.trim();
     const company = String(form.get('company') || '');
-    const phone = String(form.get('phone') || '');
+    const phone = String(form.get('phone') || '').trim();
     const location = String(form.get('location') || 'Blue Shield Towers');
     const photo = form.get('photo');
 
-    if (!description || !name) return NextResponse.json({ error: 'Name and description are required.' }, { status: 400 });
+    if (!description.trim() || !firstName || !lastName) return NextResponse.json({ error: 'First name, last name, and description are required.' }, { status: 400 });
+    if (!/^\d{10}$/.test(phone)) return NextResponse.json({ error: 'Phone number must contain exactly 10 digits.' }, { status: 400 });
     if (photo instanceof File && photo.size > 5 * 1024 * 1024) return NextResponse.json({ error: 'Photo must be 5 MB or smaller.' }, { status: 400 });
     if (photo instanceof File && photo.size > 0 && !photo.type.startsWith('image/')) return NextResponse.json({ error: 'Photo must be an image.' }, { status: 400 });
 
@@ -115,7 +142,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ ticket });
+    return NextResponse.json({ ticket, submittedTicket: { id: ticket, ticket_no: ticket, location, category, priority, description: description.trim(), reporter_name: name, company: company || null, phone, status: 'NEW', assigned_to: null, photo_url: null, created_at: new Date().toISOString() } });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Ticket could not be created.' }, { status: 500 });

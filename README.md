@@ -11,7 +11,11 @@ Browser authentication uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. The manageme
 Configured recipient: brian@propertylegend.com
 
 ## Stack
-Next.js + TypeScript + Supabase/PostgreSQL + Supabase Storage + Resend (email) + QR codes.
+Next.js + TypeScript + Supabase/PostgreSQL + Supabase Storage + Resend (email) + QR codes + Tailwind CSS + shadcn/ui conventions + Lucide icons.
+
+## Design system
+
+See [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) for the required colours, typography, spacing, components, icons, dashboard patterns, and accessibility standards.
 
 ## Important
 This package contains the application source, database schema, QR generator and deployment configuration. It cannot be made publicly reachable from this chat alone because hosting/database/email credentials are required.
