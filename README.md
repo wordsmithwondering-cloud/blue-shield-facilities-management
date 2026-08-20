@@ -5,7 +5,7 @@ Production-ready starter for a QR-based facilities management workflow.
 ## Core workflow
 Tenant scans a location QR -> mobile reporting page -> ticket created -> management dashboard -> assignment/status updates -> email notification -> resolution/closure.
 
-The management API requires `SUPABASE_SERVICE_ROLE_KEY`, which must remain server-side. Staff sign-in is restricted to emails listed in `STAFF_EMAILS` (comma-separated); create those users in Supabase Authentication first.
+Browser authentication uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. The management API requires `SUPABASE_SERVICE_ROLE_KEY`, which must remain server-side. Staff sign-in is restricted to emails listed in `STAFF_EMAILS` (comma-separated); create those users in Supabase Authentication first.
 
 ## Notification email
 Configured recipient: brian@propertylegend.com

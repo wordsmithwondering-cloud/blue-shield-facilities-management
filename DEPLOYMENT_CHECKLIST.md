@@ -5,7 +5,7 @@
 - [ ] Create Resend account and verify propertylegend.com sending domain
 - [ ] Set RESEND_API_KEY
 - [ ] Set NEXT_PUBLIC_SUPABASE_URL
-- [ ] Set NEXT_PUBLIC_SUPABASE_ANON_KEY
+- [ ] Set NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 - [ ] Set SUPABASE_SERVICE_ROLE_KEY (server-side only)
 - [ ] Create Supabase Auth staff users and set STAFF_EMAILS
 - [ ] Set NEXT_PUBLIC_APP_URL to the final Vercel domain

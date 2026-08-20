@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     if (photo instanceof File && photo.size > 5 * 1024 * 1024) return NextResponse.json({ error: 'Photo must be 5 MB or smaller.' }, { status: 400 });
     if (photo instanceof File && photo.size > 0 && !photo.type.startsWith('image/')) return NextResponse.json({ error: 'Photo must be an image.' }, { status: 400 });
 
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
     const { data, error } = await supabase.rpc('create_facility_ticket', { p_location: location, p_category: category, p_priority: priority, p_description: description, p_reporter_name: name, p_company: company, p_phone: phone });
     if (error) throw error;
 

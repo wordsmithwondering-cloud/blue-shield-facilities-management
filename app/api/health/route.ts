@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   const required = [
     'NEXT_PUBLIC_SUPABASE_URL',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
     'SUPABASE_SERVICE_ROLE_KEY',
     'STAFF_EMAILS',
   ];
